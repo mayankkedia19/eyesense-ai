@@ -1,0 +1,46 @@
+<svg viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="eyeGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#1fa9b6;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#0f8a7b;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+
+  <!-- Circuit rays (first-image style) -->
+  <line x1="256" y1="112" x2="256" y2="60" stroke="#009986" stroke-width="10" stroke-linecap="round" />
+  <circle cx="256" cy="60" r="10" fill="#009986" />
+  <line x1="340" y1="124" x2="380" y2="84" stroke="#009986" stroke-width="10" stroke-linecap="round" />
+  <circle cx="380" cy="84" r="10" fill="#009986" />
+  <line x1="390" y1="200" x2="433" y2="170" stroke="#009986" stroke-width="10" stroke-linecap="round" />
+  <circle cx="433" cy="170" r="10" fill="#009986" />
+  <line x1="404" y1="286" x2="452" y2="286" stroke="#009986" stroke-width="10" stroke-linecap="round" />
+  <circle cx="452" cy="286" r="10" fill="#009986" />
+  <line x1="389" y1="370" x2="433" y2="400" stroke="#009986" stroke-width="10" stroke-linecap="round" />
+  <circle cx="433" cy="400" r="10" fill="#009986" />
+  <line x1="340" y1="436" x2="380" y2="472" stroke="#009986" stroke-width="10" stroke-linecap="round" />
+  <circle cx="380" cy="472" r="10" fill="#009986" />
+  <line x1="256" y1="448" x2="256" y2="500" stroke="#009986" stroke-width="10" stroke-linecap="round" />
+  <circle cx="256" cy="500" r="10" fill="#009986" />
+  <line x1="172" y1="436" x2="132" y2="472" stroke="#009986" stroke-width="10" stroke-linecap="round" />
+  <circle cx="132" cy="472" r="10" fill="#009986" />
+  <line x1="121" y1="370" x2="77" y2="400" stroke="#009986" stroke-width="10" stroke-linecap="round" />
+  <circle cx="77" cy="400" r="10" fill="#009986" />
+  <line x1="106" y1="286" x2="58" y2="286" stroke="#009986" stroke-width="10" stroke-linecap="round" />
+  <circle cx="58" cy="286" r="10" fill="#009986" />
+  <line x1="120" y1="200" x2="77" y2="170" stroke="#009986" stroke-width="10" stroke-linecap="round" />
+  <circle cx="77" cy="170" r="10" fill="#009986" />
+  <line x1="171" y1="124" x2="130" y2="84" stroke="#009986" stroke-width="10" stroke-linecap="round" />
+  <circle cx="130" cy="84" r="10" fill="#009986" />
+
+  <!-- Eye geometry -->
+  <path d="M 120 256 Q 200 130 312 128 Q 424 132 462 256 Q 424 380 312 384 Q 200 382 120 256 Z" fill="none" stroke="#008973" strokeWidth="12" />
+  <path d="M 145 256 Q 216 170 312 168 Q 408 168 462 256 Q 408 344 312 344 Q 216 344 145 256 Z" fill="none" stroke="#008973" strokeWidth="10" />
+
+  <!-- Iris + pupil -->
+  <circle cx="256" cy="256" r="72" fill="url(#eyeGradient)" />
+  <circle cx="256" cy="256" r="42" fill="#0a4238" />
+  <circle cx="266" cy="246" r="16" fill="#ffffff" opacity="0.7" />
+
+  <!-- Inner glow ring -->
+  <circle cx="256" cy="256" r="95" fill="none" stroke="#0ea58f" strokeWidth="8" opacity="0.5" />
+</svg>
