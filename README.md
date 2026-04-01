@@ -53,17 +53,8 @@ The system is designed to work even without a trained ML model, ensuring reliabi
 ---
 
 ## 📂 Project Structure
-eyesense-ai/
-├── frontend/
-├── backend/
-│ ├── routes/
-│ ├── services/
-│ ├── main.py
-│ └── test_standalone.py
-├── datasets/
-│ ├── raw/
-│ └── processed/
-└── docs/
+<img width="274" height="286" alt="image" src="https://github.com/user-attachments/assets/091d546c-3b47-40fc-baff-4373e3e9279c" />
+
 
 
 ---
