@@ -52,16 +52,19 @@ The system is designed to work even without a trained ML model, ensuring reliabi
 
 ---
 ##  How to run file 
-  ## Frontend
+## Frontend
 - cd frontend 
 - npm install 
 - npm run dev
+  
+---
 
-  ##Backend
+##Backend
 - cd backend 
 - pip install numpy opencv-python
 - pip install python-multipart
 - python -m uvicorn main:app --reload
+
 ---
 
 
