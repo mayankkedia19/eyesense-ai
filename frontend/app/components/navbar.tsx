@@ -48,7 +48,7 @@ export default function Navbar() {
     <header className="sticky top-0 z-50 border-b border-slate-200 bg-white/95 backdrop-blur-md">
       <div className="mx-auto flex w-full max-w-7xl items-center justify-between px-4 py-3 sm:px-6 lg:px-8">
         <Link href="/" className="flex items-center gap-3">
-          <img src="/logo-1-eye-scan.svg" alt="EyeSense" className="h-10 w-10" />
+          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#008973] text-white text-lg">👁</div>
           <span className="text-2xl font-extrabold text-slate-900">EyeSense</span>
         </Link>
         <nav className="hidden items-center gap-8 md:flex">

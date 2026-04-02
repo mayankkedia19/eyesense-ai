@@ -1,13 +1,11 @@
 "use client"
-import React from 'react'
 
-import { 
-  Eye, 
-  ArrowLeft, 
-  Download, 
-  Share2, 
-  AlertTriangle, 
-  CheckCircle, 
+import {
+  Eye,
+  Download,
+  Share2,
+  AlertTriangle,
+  CheckCircle,
   Info,
   CheckCircle2,
   XCircle,
@@ -15,85 +13,62 @@ import {
   Activity,
   Heart,
   Droplets,
-  Sun
+  Sun,
 } from "lucide-react"
 import { useEffect, useState } from "react"
 import Link from "next/link"
-import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
 
-// Mock data for demonstration
-const mockResults = {
-  overallScore: 87,
-  overallStatus: "Good",
-  analyzedAt: new Date().toLocaleString(),
-  conditions: [
-    {
-      name: "Anemia",
-      description: "Based on conjunctiva color analysis",
-      risk: 12,
-      status: "Low Risk",
-      icon: Droplets,
-      details: "Conjunctiva appears healthy with normal pink coloration. No significant pallor detected.",
-    },
-    {
-      name: "Jaundice",
-      description: "Based on sclera yellowing analysis",
-      risk: 8,
-      status: "Low Risk",
-      icon: Sun,
-      details: "Sclera shows normal white coloration. No yellowing detected that would indicate elevated bilirubin levels.",
-    },
-    {
-      name: "Cataract",
-      description: "Based on lens opacity patterns",
-      risk: 35,
-      status: "Moderate",
-      icon: Eye,
-      details: "Mild opacity patterns detected. Consider scheduling an eye examination for further evaluation.",
-    },
-    {
-      name: "Eye Infection",
-      description: "Based on redness and vessel patterns",
-      risk: 5,
-      status: "Low Risk",
-      icon: Activity,
-      details: "No significant redness or abnormal vessel patterns detected. Eye surface appears healthy.",
-    },
-  ],
-  recommendations: [
-    "Schedule a routine eye examination within the next 6 months",
-    "Maintain good lighting when reading or using screens",
-    "Take regular breaks during prolonged screen time (20-20-20 rule)",
-    "Ensure adequate hydration and nutrition rich in vitamins A and C",
-  ],
+// ── Types ──────────────────────────────────────────────────────────────────────
+interface Condition {
+  name: string
+  description: string
+  risk: number
+  status: string
+  details: string
 }
 
-function getRiskColor(risk: number) {
-  if (risk <= 20) return "text-accent"
-  if (risk <= 50) return "text-chart-3"
-  return "text-destructive"
+interface AnalysisData {
+  overallScore: number
+  overallStatus: string
+  analyzedAt?: string
+  conditions: Condition[]
+  recommendations: string[]
 }
 
-function getRiskBgColor(risk: number) {
-  if (risk <= 20) return "bg-accent"
-  if (risk <= 50) return "bg-chart-3"
-  return "bg-destructive"
+// ── Icon map — maps condition name to a lucide icon ────────────────────────────
+const conditionIconMap: Record<string, React.ElementType> = {
+  Anemia: Droplets,
+  Jaundice: Sun,
+  Cataract: Eye,
+  "Eye Infection": Activity,
+  Glaucoma: Eye,
+  "Macular Degeneration": Eye,
 }
 
-function getOverallStatusColor(status: string) {
-  switch (status) {
-    case "Good":
-    case "Excellent":
-      return "text-accent"
-    case "Fair":
-    case "Moderate":
-      return "text-chart-3"
-    default:
-      return "text-destructive"
-  }
+function getConditionIcon(name: string): React.ElementType {
+  return conditionIconMap[name] ?? Activity
+}
+
+// ── Helpers ────────────────────────────────────────────────────────────────────
+function getRiskColor(risk: number): string {
+  if (risk <= 20) return "text-green-600"
+  if (risk <= 50) return "text-yellow-500"
+  return "text-red-600"
+}
+
+function getRiskBgColor(risk: number): string {
+  if (risk <= 20) return "bg-green-500"
+  if (risk <= 50) return "bg-yellow-400"
+  return "bg-red-500"
+}
+
+function getOverallStatusColor(status: string): string {
+  if (["Good", "Excellent"].includes(status)) return "text-green-600"
+  if (["Fair", "Moderate"].includes(status)) return "text-yellow-500"
+  return "text-red-600"
 }
 
 function getStatusIcon(risk: number) {
@@ -102,33 +77,86 @@ function getStatusIcon(risk: number) {
   return XCircle
 }
 
+// ── Normalize backend response ─────────────────────────────────────────────────
+function normalizeResult(raw: any): AnalysisData | null {
+  if (!raw) return null
+  const payload = raw.data ?? raw.result ?? raw
+  if (!payload || typeof payload !== "object") return null
+
+  return {
+    overallScore: payload.overallScore ?? payload.overall_score ?? payload.score ?? 0,
+    overallStatus: payload.overallStatus ?? payload.overall_status ?? payload.status ?? "Unknown",
+    analyzedAt: payload.analyzedAt ?? new Date().toLocaleString(),
+    conditions: Array.isArray(payload.conditions) ? payload.conditions : [],
+    recommendations: Array.isArray(payload.recommendations) ? payload.recommendations : [],
+  }
+}
+
+// ── Page ───────────────────────────────────────────────────────────────────────
 export default function ResultsPage() {
-  const router = useRouter()
+  // ✅ FIX 1: useState is now INSIDE the component (was outside before — fatal error)
   const [eyeImage, setEyeImage] = useState<string | null>(null)
+  const [result, setResult] = useState<AnalysisData | null>(null)
   const [isLoading, setIsLoading] = useState(true)
+  const [parseError, setParseError] = useState(false)
 
   useEffect(() => {
-    // Simulate loading time
-    const timer = setTimeout(() => {
-      setIsLoading(false)
-    }, 1500)
+    const timer = setTimeout(() => setIsLoading(false), 1000)
 
-    // Get the image from sessionStorage
     const storedImage = sessionStorage.getItem("eyeImage")
-    if (storedImage) {
-      setEyeImage(storedImage)
+    if (storedImage) setEyeImage(storedImage)
+
+    // ✅ FIX 2: Real result is now normalized and stored in state, then used in UI
+    const storedResult = sessionStorage.getItem("analysisResult")
+    if (storedResult) {
+      try {
+        const parsed = JSON.parse(storedResult)
+        const normalized = normalizeResult(parsed)
+        if (normalized) setResult(normalized)
+        else setParseError(true)
+      } catch {
+        setParseError(true)
+      }
+    } else {
+      setParseError(true)
     }
 
-    
     return () => clearTimeout(timer)
   }, [])
 
+  // ── Download handler ─────────────────────────────────────────────────────────
+  // ✅ FIX 3: Download button now works
+  function handleDownload() {
+    if (!result) return
+    const blob = new Blob([JSON.stringify(result, null, 2)], { type: "application/json" })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement("a")
+    a.href = url
+    a.download = "eye-health-report.json"
+    a.click()
+    URL.revokeObjectURL(url)
+  }
+
+  // ── Share handler ────────────────────────────────────────────────────────────
+  // ✅ FIX 4: Share button now works
+  async function handleShare() {
+    if (!result) return
+    const text = `Eye Health Score: ${result.overallScore}/100 — ${result.overallStatus}`
+    if (navigator.share) {
+      await navigator.share({ title: "My Eye Health Results", text })
+    } else {
+      await navigator.clipboard.writeText(text)
+      alert("Results copied to clipboard!")
+    }
+  }
+
+  // ── Loading ──────────────────────────────────────────────────────────────────
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
+      <div className="flex min-h-screen items-center justify-center bg-background">
         <div className="text-center">
-          <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-4 animate-pulse">
-            <Eye className="w-8 h-8 text-primary" />
+          <div className="mx-auto mb-4 flex h-16 w-16 animate-pulse items-center justify-center rounded-full bg-primary/10">
+            <Eye className="h-8 w-8 text-primary" />
           </div>
           <p className="text-muted-foreground">Loading results...</p>
         </div>
@@ -136,166 +164,218 @@ export default function ResultsPage() {
     )
   }
 
+  // ── No Result / Error ────────────────────────────────────────────────────────
+  if (parseError || !result) {
+    return (
+      <div className="flex min-h-screen flex-col items-center justify-center gap-4 px-4 text-center">
+        <XCircle className="h-12 w-12 text-red-500" />
+        <h2 className="text-xl font-bold">No Results Found</h2>
+        <p className="text-muted-foreground">
+          {parseError
+            ? "Could not read analysis results. The backend may not have returned data."
+            : "Please complete a scan first."}
+        </p>
+        <Link href="/scan">
+          <Button className="mt-2 bg-emerald-600 hover:bg-emerald-700">
+            <RefreshCw className="mr-2 h-4 w-4" />
+            Go to Scan
+          </Button>
+        </Link>
+      </div>
+    )
+  }
+
+  // ── Main UI ──────────────────────────────────────────────────────────────────
+  // ✅ FIX 5: Everything now uses `result` (real data) instead of `mockResults`
   return (
     <div className="min-h-screen bg-background">
-      <main className="pt-24 pb-12 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-4xl mx-auto">
+      <main className="px-4 pb-12 pt-24 sm:px-6 lg:px-8">
+        <div className="mx-auto max-w-4xl">
+
           {/* Header */}
-          <div className="text-center mb-8">
-            <h1 className="text-3xl sm:text-4xl font-bold text-foreground">
+          <div className="mb-8 text-center">
+            <h1 className="text-3xl font-bold text-foreground sm:text-4xl">
               Your Eye Health Results
             </h1>
+            {/* ✅ FIX 6: Shows real analyzedAt from result, not hardcoded mockResults */}
             <p className="mt-2 text-muted-foreground">
-              Analysis completed on {mockResults.analyzedAt}
+              Analysis completed on {result.analyzedAt ?? new Date().toLocaleString()}
             </p>
           </div>
+
+          {/* Eye Image */}
+          {eyeImage && (
+            <div className="mb-6 overflow-hidden rounded-xl border border-border">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={eyeImage} alt="Scanned eye" className="h-64 w-full object-cover" />
+            </div>
+          )}
 
           {/* Overall Score */}
           <Card className="mb-6 border-border">
             <CardContent className="p-8">
               <div className="grid md:grid-cols-2">
+
                 {/* Score Circle */}
-                <div className="p-8 flex flex-col items-center justify-center bg-card">
-                  <div className="relative w-48 h-48">
-                    <svg className="w-full h-full -rotate-90">
+                <div className="flex flex-col items-center justify-center bg-card p-8">
+                  <div className="relative h-48 w-48">
+                    <svg className="h-full w-full -rotate-90">
+                      <circle cx="96" cy="96" r="88" stroke="currentColor" strokeWidth="8" fill="none" className="text-muted" />
                       <circle
-                        cx="96"
-                        cy="96"
-                        r="88"
-                        stroke="currentColor"
-                        strokeWidth="8"
-                        fill="none"
-                        className="text-muted"
-                      />
-                      <circle
-                        cx="96"
-                        cy="96"
-                        r="88"
-                        stroke="currentColor"
-                        strokeWidth="8"
-                        fill="none"
-                        strokeDasharray={`${(mockResults.overallScore / 100) * 552} 552`}
-                        className={`${getRiskColor(100 - mockResults.overallScore)} transition-all`}
+                        cx="96" cy="96" r="88"
+                        stroke="currentColor" strokeWidth="8" fill="none"
+                        strokeDasharray={`${(result.overallScore / 100) * 552} 552`}
+                        className={`${getRiskColor(100 - result.overallScore)} transition-all duration-700`}
                       />
                     </svg>
                     <div className="absolute inset-0 flex flex-col items-center justify-center">
-                      <span className="text-5xl font-bold text-foreground">
-                        {mockResults.overallScore}
-                      </span>
+                      <span className="text-5xl font-bold text-foreground">{result.overallScore}</span>
                       <span className="text-muted-foreground">/100</span>
                     </div>
                   </div>
                   <div className="mt-4 text-center">
-                    <p className={`text-2xl font-semibold ${getOverallStatusColor(mockResults.overallStatus)}`}>
-                      {mockResults.overallStatus}
+                    <p className={`text-2xl font-semibold ${getOverallStatusColor(result.overallStatus)}`}>
+                      {result.overallStatus}
                     </p>
-                    <p className="text-sm text-muted-foreground mt-2">Eye Health Status</p>
+                    <p className="mt-2 text-sm text-muted-foreground">Eye Health Status</p>
                   </div>
                 </div>
 
-                {/* Assessment Details */}
-                <div className="p-8 flex flex-col justify-center">
-                  <div className="bg-background rounded-xl p-6">
-                    <div className="flex items-start gap-3 mb-6">
-                      <Info className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
+                {/* Disclaimer */}
+                <div className="flex flex-col justify-center p-8">
+                  <div className="rounded-xl bg-background p-6">
+                    <div className="mb-6 flex items-start gap-3">
+                      <Info className="mt-0.5 h-5 w-5 flex-shrink-0 text-primary" />
                       <div>
-                        <h3 className="font-semibold text-foreground mb-1">Important Disclaimer</h3>
+                        <h3 className="mb-1 font-semibold text-foreground">Important Disclaimer</h3>
                         <p className="text-sm text-muted-foreground">
-                          This analysis is for preliminary screening only and does not replace professional medical advice. Please consult with a qualified healthcare professional for diagnosis and treatment.
+                          This analysis is for preliminary screening only and does not replace professional
+                          medical advice. Please consult a qualified healthcare professional for diagnosis.
                         </p>
                       </div>
                     </div>
                     <div className="space-y-3">
                       <div className="flex items-center gap-2">
-                        <Eye className="w-4 h-4 text-primary" />
+                        <Eye className="h-4 w-4 text-primary" />
                         <span className="text-sm text-foreground">Image analyzed using AI</span>
                       </div>
                       <div className="flex items-center gap-2">
-                        <CheckCircle className="w-4 h-4 text-accent" />
-                        <span className="text-sm text-foreground">Analysis complete and accurate</span>
+                        <CheckCircle className="h-4 w-4 text-green-500" />
+                        <span className="text-sm text-foreground">Analysis complete</span>
                       </div>
                     </div>
                   </div>
                 </div>
+
               </div>
             </CardContent>
           </Card>
 
-          {/* Condition Details */}
-          <div className="grid gap-6">
-            <h2 className="text-2xl font-bold text-foreground">Detailed Assessment</h2>
-            {mockResults.conditions.map((condition, index) => {
-              const StatusIcon = getStatusIcon(condition.risk)
-              return (
-                <Card key={index} className="border-border">
-                  <CardHeader>
-                    <div className="flex items-start justify-between">
-                      <div className="flex items-start gap-4">
-                        <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center">
-                          <condition.icon className="w-6 h-6 text-primary" />
+          {/* Conditions */}
+          {result.conditions.length > 0 ? (
+            <div className="grid gap-6">
+              <h2 className="text-2xl font-bold text-foreground">Detailed Assessment</h2>
+
+              {result.conditions.map((condition, index) => {
+                const StatusIcon = getStatusIcon(condition.risk)
+                const ConditionIcon = getConditionIcon(condition.name)
+                return (
+                  <Card key={index} className="border-border">
+                    <CardHeader>
+                      <div className="flex items-start justify-between">
+                        <div className="flex items-start gap-4">
+                          <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-primary/10">
+                            <ConditionIcon className="h-6 w-6 text-primary" />
+                          </div>
+                          <div>
+                            <CardTitle className="text-xl">{condition.name}</CardTitle>
+                            <p className="mt-1 text-sm text-muted-foreground">{condition.description}</p>
+                          </div>
                         </div>
-                        <div>
-                          <CardTitle className="text-xl">{condition.name}</CardTitle>
-                          <p className="text-sm text-muted-foreground mt-1">{condition.description}</p>
+                        <div className="text-right">
+                          <div className="flex items-center justify-end gap-2">
+                            <StatusIcon className={`h-5 w-5 ${getRiskColor(condition.risk)}`} />
+                            <span className={`text-lg font-bold ${getRiskColor(condition.risk)}`}>
+                              {condition.risk}%
+                            </span>
+                          </div>
+                          <p className="mt-1 text-xs text-muted-foreground">{condition.status}</p>
                         </div>
                       </div>
-                      <div className="text-right">
-                        <div className="flex items-center gap-2 justify-end">
-                          <StatusIcon className={`w-5 h-5 ${getRiskColor(condition.risk)}`} />
-                          <span className={`text-lg font-bold ${getRiskColor(condition.risk)}`}>
-                            {condition.risk}%
-                          </span>
-                        </div>
-                        <p className="text-xs text-muted-foreground mt-1">{condition.status}</p>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      {/* Colored progress bar */}
+                      <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
+                        <div
+                          className={`h-full rounded-full transition-all duration-700 ${getRiskBgColor(condition.risk)}`}
+                          style={{ width: `${Math.min(condition.risk, 100)}%` }}
+                        />
                       </div>
-                    </div>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <Progress value={condition.risk} />
-                    <p className="text-sm text-muted-foreground">{condition.details}</p>
-                  </CardContent>
-                </Card>
-              )
-            })}
-          </div>
+                      <p className="text-sm text-muted-foreground">{condition.details}</p>
+                    </CardContent>
+                  </Card>
+                )
+              })}
+            </div>
+          ) : (
+            <Card className="border-border">
+              <CardContent className="p-6 text-center text-muted-foreground">
+                No detailed condition data was returned from the server.
+              </CardContent>
+            </Card>
+          )}
 
           {/* Recommendations */}
-          <Card className="mt-6 border-border">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Heart className="w-5 h-5 text-primary" />
-                Recommendations
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <ul className="space-y-3">
-                {mockResults.recommendations.map((rec, index) => (
-                  <li key={index} className="flex items-start gap-3">
-                    <CheckCircle2 className="w-5 h-5 text-accent flex-shrink-0 mt-0.5" />
-                    <span className="text-sm text-muted-foreground">{rec}</span>
-                  </li>
-                ))}
-              </ul>
-            </CardContent>
-          </Card>
+          {result.recommendations.length > 0 && (
+            <Card className="mt-6 border-border">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Heart className="h-5 w-5 text-rose-500" />
+                  Recommendations
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <ul className="space-y-3">
+                  {result.recommendations.map((rec, index) => (
+                    <li key={index} className="flex items-start gap-3">
+                      <CheckCircle2 className="mt-0.5 h-5 w-5 flex-shrink-0 text-green-500" />
+                      <span className="text-sm text-muted-foreground">{rec}</span>
+                    </li>
+                  ))}
+                </ul>
+              </CardContent>
+            </Card>
+          )}
 
           {/* Actions */}
-          <div className="mt-8 flex flex-col sm:flex-row gap-4">
+          <div className="mt-8 flex flex-col gap-4 sm:flex-row">
             <Link href="/scan" className="flex-1">
-              <Button size="lg" className="w-full bg-primary hover:bg-primary/90 text-primary-foreground gap-2">
-                <RefreshCw className="w-5 h-5" />
+              <Button size="lg" className="w-full gap-2 bg-primary hover:bg-primary/90 text-primary-foreground">
+                <RefreshCw className="h-5 w-5" />
                 New Scan
               </Button>
             </Link>
-            <Button size="lg" variant="outline" className="flex-1 gap-2 border-border text-foreground hover:bg-muted">
-              <Download className="w-5 h-5" />
+            {/* ✅ FIX 7: Download and Share now have onClick handlers */}
+            <Button
+              size="lg"
+              variant="outline"
+              onClick={handleDownload}
+              className="flex-1 gap-2 border-border text-foreground hover:bg-muted"
+            >
+              <Download className="h-5 w-5" />
               Download Report
             </Button>
-            <Button size="lg" variant="outline" className="flex-1 gap-2 border-border text-foreground hover:bg-muted">
-              <Share2 className="w-5 h-5" />
+            <Button
+              size="lg"
+              variant="outline"
+              onClick={handleShare}
+              className="flex-1 gap-2 border-border text-foreground hover:bg-muted"
+            >
+              <Share2 className="h-5 w-5" />
               Share Results
             </Button>
           </div>
+
         </div>
       </main>
     </div>
